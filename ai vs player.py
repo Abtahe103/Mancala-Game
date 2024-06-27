@@ -99,7 +99,7 @@ class Mancala_Board:
         if i > 6:
             stones = add
             while stones > 0:
-                i += 1
+                i += 1             
                 i = i % 14
                 if i == 6:
                     continue
@@ -112,6 +112,7 @@ class Mancala_Board:
                 self.mancala[-i + 12] = 0
             if i == 13:
                 repeat_turn = True
+                
         else:
             stones = add
             while stones > 0:
@@ -200,12 +201,13 @@ def alphabeta(mancala, depth, alpha, beta, MinorMax):
         return v, player_move
 
 def player_aibot():
-    j = Mancala_Board(None)
+    mancala_board = Mancala_Board(None)
     clock = pygame.time.Clock()
     running = True
     player_turn = True
+    selected_pit = -1
     
-    draw_board(j.mancala)
+    draw_board(mancala_board.mancala)
     pygame.display.flip()
     
     while running:
@@ -220,29 +222,43 @@ def player_aibot():
                     pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
                     pit_y = BOARD_Y + BOARD_HEIGHT - PIT_RADIUS - PIT_GAP
                     if (x - pit_x) ** 2 + (y - pit_y) ** 2 <= PIT_RADIUS ** 2:
-                        if j.mancala[i] > 0:
-                            repeat_turn = j.player_move(i)
-                            player_turn = repeat_turn
-                            draw_board(j.mancala)
-                            pygame.display.flip()
+                        if mancala_board.mancala[i] > 0:
+                            selected_pit = i
                             break
         
-        if not player_turn and not j.isEnd():
-            _, ai_move = alphabeta(j, 5, -100000, 100000, True)  # Reduced the depth from 10 to 5
-            animate_move(j.mancala, ai_move)
-            repeat_turn = j.player_move(ai_move)
-            player_turn = not repeat_turn
-            draw_board(j.mancala)
-            pygame.display.flip()
+        if selected_pit != -1 and player_turn:
+            repeat_turn = mancala_board.player_move(selected_pit)
+            animate_move(mancala_board.mancala, selected_pit)
+            draw_board(mancala_board.mancala)  # Draw the updated board state
+            pygame.display.flip()  # Update the display
+            time.sleep(0.5)  # Adjust animation speed as needed
+            
+            # Check if the player gets another turn
+            player_turn = repeat_turn
+            
+            # Reset selected pit
+            selected_pit = -1
         
-        if j.isEnd():
-            winner_message = "AI-BOT WINS" if j.mancala[13] > j.mancala[6] else "YOU WIN"
-            draw_board(j.mancala, message=winner_message)
+        if not player_turn and not mancala_board.isEnd():
+            _, ai_move = alphabeta(mancala_board, 5, -100000, 100000, True)  # Calculate AI's move
+            repeat_turn = mancala_board.player_move(ai_move)
+            animate_move(mancala_board.mancala, ai_move)  # Animate the AI's move
+            draw_board(mancala_board.mancala)  # Draw the updated board state
+            pygame.display.flip()  # Update the display
+            time.sleep(0.5)  # Adjust animation speed as needed
+            
+            # Check if the AI gets another turn
+            player_turn = not repeat_turn
+        
+        if mancala_board.isEnd():
+            winner_message = "AI-BOT WINS" if mancala_board.mancala[13] > mancala_board.mancala[6] else "YOU WIN"
+            draw_board(mancala_board.mancala, message=winner_message)
             pygame.display.flip()
             time.sleep(3)
             running = False
         
         clock.tick(60)
+
 
 print("\n:::: MANCALA BOARD GAME ::::")
 print("!!! Welcome to Mancala Gameplay !!!")
