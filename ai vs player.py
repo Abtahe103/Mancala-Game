@@ -82,48 +82,53 @@ def draw_board(mancala, highlight_pit=None, message=""):
 def animate_move(mancala, index):
     draw_board(mancala, highlight_pit=index)
     pygame.display.flip()
-    time.sleep(0.5)
+    time.sleep(0.5)  
 
 class Mancala_Board:
-    def __init__(self, mancala=None):
+    def __init__(self, mancala):
         if mancala is not None:
             self.mancala = mancala[:]
         else:
-            self.mancala = [4 for _ in range(14)]
-            self.mancala[6] = 0
-            self.mancala[13] = 0
+            self.mancala = [4] * 6 + [0] + [4] * 6 + [0]
 
     def player_move(self, i):
         j = i
         repeat_turn = False
         add = self.mancala[j]
         self.mancala[j] = 0
-        stones = add
-        while stones > 0:
-            i += 1
-            if i > 13:
-                i = 0
-            if (j <= 5 and i == 13) or (j >= 7 and i == 6):
-                continue
-            self.mancala[i] += 1
-            animate_move(self.mancala, i)
-            stones -= 1
-        
-        # Capture stones if last stone lands in an empty pit on the player's side
-        if (j <= 5 and 0 <= i <= 5 and self.mancala[i] == 1) or (j >= 7 and 7 <= i <= 12 and self.mancala[i] == 1):
-            opposite_pit = 12 - i
-            if self.mancala[opposite_pit] > 0:
-                if j <= 5:  # Player 1
-                    self.mancala[6] += 1 + self.mancala[opposite_pit]
-                else:  # Player 2
-                    self.mancala[13] += 1 + self.mancala[opposite_pit]
+        if i > 6:
+            stones = add
+            while stones > 0:
+                i += 1             
+                i = i % 14
+                if i == 6:
+                    continue
+                else:
+                    self.mancala[i % 14] += 1
+                stones -= 1
+            if i > 6 and self.mancala[i] == 1 and i != 13 and self.mancala[-i + 12] != 0:
+                self.mancala[13] += 1 + self.mancala[-i + 12]
                 self.mancala[i] = 0
-                self.mancala[opposite_pit] = 0
-
-        # Check if last stone lands in the player's Store
-        if (j <= 5 and i == 6) or (j >= 7 and i == 13):
-            repeat_turn = True
-        
+                self.mancala[-i + 12] = 0
+            if i == 13:
+                repeat_turn = True
+                
+        else:
+            stones = add
+            while stones > 0:
+                i += 1
+                i = i % 14
+                if i == 13:
+                    continue
+                else:
+                    self.mancala[i % 14] += 1
+                stones -= 1
+            if i < 6 and self.mancala[i] == 1 and i != 6 and self.mancala[-i + 12] != 0:
+                self.mancala[6] += 1 + self.mancala[-i + 12]
+                self.mancala[i] = 0
+                self.mancala[-i + 12] = 0
+            if i == 6:
+                repeat_turn = True
         return repeat_turn
 
     def isEnd(self):
@@ -140,6 +145,15 @@ class Mancala_Board:
                     self.mancala[i] = 0
             return True
         return False
+
+    def print_mancala(self):
+        for i in range(12, 6, -1):
+            print('  ', self.mancala[i], '   ', end='')
+        print('  ')
+        print(self.mancala[13], '                                           ', self.mancala[6])
+        for i in range(0, 6, 1):
+            print('  ', self.mancala[i], '   ', end='')
+        print('  ')
 
     def husVal(self):
         if self.isEnd():
@@ -158,9 +172,8 @@ def alphabeta(mancala, depth, alpha, beta, MinorMax):
     if MinorMax:
         v = -1000000
         player_move = -1
-        for i in range(7, 13):
-            if mancala.mancala[i] == 0:
-                continue
+        for i in range(7, 13, 1):
+            if mancala.mancala[i] == 0: continue
             a = Mancala_Board(mancala.mancala[:])
             minormax = a.player_move(i)
             newv, _ = alphabeta(a, depth - 1, alpha, beta, minormax)
@@ -174,9 +187,8 @@ def alphabeta(mancala, depth, alpha, beta, MinorMax):
     else:
         v = 1000000
         player_move = -1
-        for i in range(0, 6):
-            if mancala.mancala[i] == 0:
-                continue
+        for i in range(0, 6, 1):
+            if mancala.mancala[i] == 0: continue
             a = Mancala_Board(mancala.mancala[:])
             minormax = a.player_move(i)
             newv, _ = alphabeta(a, depth - 1, alpha, beta, not minormax)
@@ -188,65 +200,69 @@ def alphabeta(mancala, depth, alpha, beta, MinorMax):
                 break
         return v, player_move
 
-def get_pit_index(x, y):
-    # Check pits on the left side (12 to 7)
-    for i in range(6):
-        pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
-        pit_y = BOARD_Y + PIT_RADIUS + PIT_GAP
-        if (x - pit_x) ** 2 + (y - pit_y) ** 2 <= PIT_RADIUS ** 2:
-            return 12 - i
-
-    # Check pits on the right side (0 to 5)
-    for i in range(6):
-        pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
-        pit_y = BOARD_Y + BOARD_HEIGHT - PIT_RADIUS - PIT_GAP
-        if (x - pit_x) ** 2 + (y - pit_y) ** 2 <= PIT_RADIUS ** 2:
-            return i
-
-    return None
-
-def player_player():
-    j = Mancala_Board(None)
-    player_turn = random.choice([1, 2])  # Randomly choose starting player
-    draw_board(j.mancala, message=f"Player {player_turn}'s turn")
+def player_aibot():
+    mancala_board = Mancala_Board(None)
+    clock = pygame.time.Clock()
+    running = True
+    player_turn = True
+    selected_pit = -1
+    
+    draw_board(mancala_board.mancala)
     pygame.display.flip()
+    
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and player_turn:
+                x, y = event.pos
+                for i in range(6):
+                    pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
+                    pit_y = BOARD_Y + BOARD_HEIGHT - PIT_RADIUS - PIT_GAP
+                    if (x - pit_x) ** 2 + (y - pit_y) ** 2 <= PIT_RADIUS ** 2:
+                        if mancala_board.mancala[i] > 0:
+                            selected_pit = i
+                            break
+        
+        if selected_pit != -1 and player_turn:
+            repeat_turn = mancala_board.player_move(selected_pit)
+            animate_move(mancala_board.mancala, selected_pit)
+            draw_board(mancala_board.mancala)  # Draw the updated board state
+            pygame.display.flip()  # Update the display
+            time.sleep(0.5)  # Adjust animation speed as needed
+            
+            # Check if the player gets another turn
+            player_turn = repeat_turn
+            
+            # Reset selected pit
+            selected_pit = -1
+        
+        if not player_turn and not mancala_board.isEnd():
+            _, ai_move = alphabeta(mancala_board, 5, -100000, 100000, True)  # Calculate AI's move
+            repeat_turn = mancala_board.player_move(ai_move)
+            animate_move(mancala_board.mancala, ai_move)  # Animate the AI's move
+            draw_board(mancala_board.mancala)  # Draw the updated board state
+            pygame.display.flip()  # Update the display
+            time.sleep(0.5)  # Adjust animation speed as needed
+            
+            # Check if the AI gets another turn
+            player_turn = not repeat_turn
+        
+        if mancala_board.isEnd():
+            winner_message = "AI-BOT WINS" if mancala_board.mancala[13] > mancala_board.mancala[6] else "YOU WIN"
+            draw_board(mancala_board.mancala, message=winner_message)
+            pygame.display.flip()
+            time.sleep(3)
+            running = False
+        
+        clock.tick(60)
 
-    while True:
-        if j.isEnd():
-            break
-        valid_move = False
-        while not valid_move:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    x, y = event.pos
-                    pit_index = get_pit_index(x, y)
-                    if pit_index is not None:
-                        if (player_turn == 1 and 7 <= pit_index <= 12) or (player_turn == 2 and 0 <= pit_index <= 5):
-                            if j.mancala[pit_index] != 0:
-                                valid_move = True
-                                t = j.player_move(pit_index)
-                                draw_board(j.mancala, message=f"Player {player_turn}'s turn")
-                                pygame.display.flip()
-                                if not t:  # If not repeat turn
-                                    player_turn = 2 if player_turn == 1 else 1  # Switch player turn
-
-    # Determine the winner
-    if j.mancala[6] > j.mancala[13]:
-        winner = "Player 1"
-    elif j.mancala[6] < j.mancala[13]:
-        winner = "Player 2"
-    else:
-        winner = "It's a tie"
-
-    draw_board(j.mancala, message=f"Game over! {winner} wins!")
-    pygame.display.flip()
 
 print("\n:::: MANCALA BOARD GAME ::::")
 print("!!! Welcome to Mancala Gameplay !!!")
 while True:
     print("\nPlay the game")
-    player_player()
-    input("Press Enter to play again or close the window to exit...")
+    player_aibot()
+    break
