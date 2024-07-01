@@ -92,10 +92,10 @@ def calculate_winning_probability(mancala):
     
     return winning_sim.output['winning_prob']
 
-def draw_board(mancala, highlight_pit=None, message="", probability=0):
+def draw_board(mancala, highlight_pit=None, message="", probability=0, turn_message=""):
     screen.fill(WHITE)
     
-     # Draw the Mancala board background
+    # Draw the Mancala board background
     pygame.draw.rect(screen, DARK_BLUE, (BOARD_X, BOARD_Y, BOARD_WIDTH, BOARD_HEIGHT))
     
     # Draw the left mancala
@@ -137,6 +137,12 @@ def draw_board(mancala, highlight_pit=None, message="", probability=0):
     # Draw winning probability
     probability_text = font.render(f'Your Winning Probability: {probability:.2f}%', True, BLACK)
     screen.blit(probability_text, (10, 10))
+
+    # Draw turn message
+    if turn_message:
+        turn_text = turn_font.render(turn_message, True, BLACK)
+        screen.blit(turn_text, (SCREEN_WIDTH // 2 - turn_text.get_width() // 2, SCREEN_HEIGHT - 50))
+
 
 
 def animate_move(mancala, index):
@@ -266,8 +272,9 @@ def player_aibot():
     running = True
     player_turn = True
     selected_pit = -1
+    suggested_move = None
     
-    draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala))
+    draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala), turn_message="Your Turn")
     pygame.display.flip()
     
     while running:
@@ -286,38 +293,91 @@ def player_aibot():
                             selected_pit = i
                             break
         
+        if player_turn and suggested_move is None:
+            suggested_move = genetic_algorithm(mancala_board)
+        
+        if player_turn:
+            suggestion_font = pygame.font.SysFont('Arial', 28)  # Use Arial font for better clarity
+            suggestion_text = suggestion_font.render(f"Suggested move: Pit {suggested_move + 1}", True, BLACK)
+            
+            # Clear the area where the suggestion will be displayed
+            pygame.draw.rect(screen, WHITE, (10, 50, 300, 40))
+            
+            # Display the suggestion text
+            screen.blit(suggestion_text, (10, 55))
+            pygame.display.flip()
+        
         if selected_pit != -1 and player_turn:
             repeat_turn = mancala_board.player_move(selected_pit)
             animate_move(mancala_board.mancala, selected_pit)
-            draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala))  # Draw the updated board state with winning probability
-            pygame.display.flip()  # Update the display
-            time.sleep(0.5)  # Adjust animation speed as needed
+            draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala), turn_message="Your Turn" if repeat_turn else "AI's Turn")
+            pygame.display.flip()
+            time.sleep(0.5)
             
-            # Check if the player gets another turn
             player_turn = repeat_turn
-            
-            # Reset selected pit
             selected_pit = -1
+            suggested_move = None  # Reset suggested move for next turn
         
         if not player_turn and not mancala_board.isEnd():
-            _, ai_move = alphabeta(mancala_board, 5, -100000, 100000, True)  # Calculate AI's move
+            _, ai_move = alphabeta(mancala_board, 5, -100000, 100000, True)
             repeat_turn = mancala_board.player_move(ai_move)
-            animate_move(mancala_board.mancala, ai_move)  # Animate the AI's move
-            draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala))  # Draw the updated board state with winning probability
-            pygame.display.flip()  # Update the display
-            time.sleep(0.5)  # Adjust animation speed as needed
+            animate_move(mancala_board.mancala, ai_move)
+            draw_board(mancala_board.mancala, probability=calculate_winning_probability(mancala_board.mancala), turn_message="AI's Turn" if repeat_turn else "Your Turn")
+            pygame.display.flip()
+            time.sleep(0.5)
             
-            # Check if the AI gets another turn
             player_turn = not repeat_turn
+            suggested_move = None  # Reset suggested move for next turn
         
         if mancala_board.isEnd():
-            winner_message = "AI-BOT WINS" if mancala_board.mancala[13] > mancala_board.mancala[6] else "YOU WIN"
+            if mancala_board.mancala[13] > mancala_board.mancala[6]:
+                winner_message = "AI-BOT WINS"
+            elif mancala_board.mancala[13] < mancala_board.mancala[6]: 
+                winner_message = "YOU WIN" 
+            else: 
+                winner_message = "TIE"
             draw_board(mancala_board.mancala, message=winner_message)
             pygame.display.flip()
             time.sleep(3)
             running = False
         
         clock.tick(60)
+
+        
+def initialize_population(size, num_pits):
+    return [random.sample(range(6), num_pits) for _ in range(size)]
+
+
+
+
+def crossover(parent1, parent2):
+    crossover_point = random.randint(1, len(parent1) - 1)
+    child = parent1[:crossover_point] + parent2[crossover_point:]
+    return child
+
+def mutate(individual, mutation_rate):
+    for i in range(len(individual)):
+        if random.random() < mutation_rate:
+            individual[i] = random.randint(0, 5)
+    return individual
+
+def genetic_algorithm(mancala_board, population_size=50, generations=20, mutation_rate=0.1):
+    population = initialize_population(population_size, 3)  # Consider sequences of 3 moves
+    
+    for _ in range(generations):
+        population = sorted(population, key=lambda x: fitness(x, mancala_board), reverse=True)
+        new_population = population[:population_size // 2]
+        
+        while len(new_population) < population_size:
+            parent1, parent2 = random.sample(population[:population_size // 2], 2)
+            child = crossover(parent1, parent2)
+            child = mutate(child, mutation_rate)
+            new_population.append(child)
+        
+        population = new_population
+    
+    best_sequence = max(population, key=lambda x: fitness(x, mancala_board))
+    return best_sequence[0]  # Return the first move of the best sequence
         
 def splash_screen():
     screen.fill(WHITE)
