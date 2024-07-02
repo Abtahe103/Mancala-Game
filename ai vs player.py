@@ -347,8 +347,14 @@ def player_aibot():
 def initialize_population(size, num_pits):
     return [random.sample(range(6), num_pits) for _ in range(size)]
 
-
-
+def fitness(individual, mancala_board):
+    board_copy = Mancala_Board(mancala_board.mancala[:])
+    total_stones = 0
+    for move in individual:
+        if board_copy.mancala[move] > 0:
+            board_copy.player_move(move)
+            total_stones += board_copy.mancala[6]  # Player's mancala
+    return total_stones
 
 def crossover(parent1, parent2):
     crossover_point = random.randint(1, len(parent1) - 1)
