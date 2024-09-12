@@ -6,12 +6,10 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
-# Initialize Pygame
 pygame.init()
 
-# Define colors
 WHITE = (255, 255, 255)
-BROWN = (139, 69, 19)
+BROWN = (245, 208, 159)
 DARK_BROWN = (101, 67, 33)
 HIGHLIGHT_COLOR = (255, 0, 0)
 BLACK = (0, 0, 0)
@@ -19,37 +17,40 @@ RED = (255, 0, 0)
 GREY = (169, 169, 169)
 DARK_BLUE=(55, 52, 235)
 YELLOW = (235, 143, 52)
+DARK_YELLOW = (252, 166, 50)
 RETRO_BLUE = (66, 134, 244)
 RETRO_YELLOW = (255, 207, 64)
 RETRO_PINK = (244, 66, 182)
+RED = (237, 55, 55)
+splash_screen_font_color = (252, 49, 3)
 
-# Set up the screen
+
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Mancala')
 
-# Board dimensions
+
 BOARD_WIDTH = 600
 BOARD_HEIGHT = 200
 BOARD_X = (SCREEN_WIDTH - BOARD_WIDTH) // 2
 BOARD_Y = (SCREEN_HEIGHT - BOARD_HEIGHT) // 2
 
-# Pit dimensions
+
 PIT_RADIUS = 30
 PIT_GAP = 20
 
-# Mancala dimensions
+
 MANCALA_WIDTH = 60
 MANCALA_HEIGHT = 180
 
-# Font for displaying stones and messages
+
 font = pygame.font.SysFont(None, 36)
 message_font = pygame.font.SysFont(None, 48)
-splash_font = pygame.font.Font("PressStart2P-Regular.ttf", 50)  # Use the retro pixelated font
+splash_font = pygame.font.Font("PressStart2P-Regular.ttf", 50)
 turn_font = pygame.font.SysFont(None, 48)
 
-# Fuzzy logic system setup
+
 stones_diff = ctrl.Antecedent(np.arange(-48, 49, 1), 'stones_diff')
 extra_turns = ctrl.Antecedent(np.arange(0, 2, 1), 'extra_turns')
 capturing_opportunities = ctrl.Antecedent(np.arange(0, 2, 1), 'capturing_opportunities')
@@ -95,16 +96,20 @@ def calculate_winning_probability(mancala):
 def draw_board(mancala, highlight_pit=None, message="", probability=0, turn_message=""):
     screen.fill(WHITE)
     
-    # Draw the Mancala board background
-    pygame.draw.rect(screen, DARK_BLUE, (BOARD_X, BOARD_Y, BOARD_WIDTH, BOARD_HEIGHT))
+    # Mancala board background with curved edges
+    pygame.draw.rect(screen, BROWN, (BOARD_X, BOARD_Y, BOARD_WIDTH, BOARD_HEIGHT), border_radius=30)
     
-    # Draw the left mancala
-    pygame.draw.rect(screen, YELLOW, (BOARD_X + PIT_RADIUS - MANCALA_WIDTH, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2, MANCALA_WIDTH, MANCALA_HEIGHT))
+    # left mancala with curved edges
+    pygame.draw.rect(screen, YELLOW, 
+                     (BOARD_X + PIT_RADIUS - MANCALA_WIDTH, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2, MANCALA_WIDTH, MANCALA_HEIGHT), 
+                     border_radius=30)
     
-    # Draw the right mancala
-    pygame.draw.rect(screen, YELLOW, (BOARD_X + BOARD_WIDTH - PIT_RADIUS, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2, MANCALA_WIDTH, MANCALA_HEIGHT))
+    # right mancala with curved edges
+    pygame.draw.rect(screen, YELLOW, 
+                     (BOARD_X + BOARD_WIDTH - PIT_RADIUS, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2, MANCALA_WIDTH, MANCALA_HEIGHT), 
+                     border_radius=30)
     
-    # Draw the pits on the left side
+    # pits on the left side
     for i in range(6):
         pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
         pit_y = BOARD_Y + PIT_RADIUS + PIT_GAP
@@ -113,7 +118,7 @@ def draw_board(mancala, highlight_pit=None, message="", probability=0, turn_mess
         stones_text = font.render(str(mancala[12 - i]), True, WHITE)
         screen.blit(stones_text, (pit_x - 10, pit_y - 10))
     
-    # Draw the pits on the right side
+    # pits on the right side
     for i in range(6):
         pit_x = BOARD_X + (PIT_RADIUS * 2 + PIT_GAP) * i + MANCALA_WIDTH + PIT_RADIUS
         pit_y = BOARD_Y + BOARD_HEIGHT - PIT_RADIUS - PIT_GAP
@@ -122,23 +127,22 @@ def draw_board(mancala, highlight_pit=None, message="", probability=0, turn_mess
         stones_text = font.render(str(mancala[i]), True, WHITE)
         screen.blit(stones_text, (pit_x - 10, pit_y - 10))
     
-    # Draw stones in mancalas
+    # stones in mancalas
     left_mancala_text = font.render(str(mancala[13]), True, WHITE)
     screen.blit(left_mancala_text, (BOARD_X + PIT_RADIUS - MANCALA_WIDTH + 10, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2 + 70))
     
     right_mancala_text = font.render(str(mancala[6]), True, WHITE)
     screen.blit(right_mancala_text, (BOARD_X + BOARD_WIDTH - PIT_RADIUS + 10, BOARD_Y + (BOARD_HEIGHT - MANCALA_HEIGHT) // 2 + 70))
 
-    # Draw message
     if message:
         message_text = message_font.render(message, True, BLACK)
         screen.blit(message_text, (SCREEN_WIDTH // 2 - message_text.get_width() // 2, SCREEN_HEIGHT - 100))
     
-    # Draw winning probability
+    # winning probability
     probability_text = font.render(f'Your Winning Probability: {probability:.2f}%', True, BLACK)
     screen.blit(probability_text, (10, 10))
 
-    # Draw turn message
+
     if turn_message:
         turn_text = turn_font.render(turn_message, True, BLACK)
         screen.blit(turn_text, (SCREEN_WIDTH // 2 - turn_text.get_width() // 2, SCREEN_HEIGHT - 50))
@@ -171,11 +175,13 @@ class Mancala_Board:
                     continue
                 else:
                     self.mancala[i % 14] += 1
+                
                 stones -= 1
             if i > 6 and self.mancala[i] == 1 and i != 13 and self.mancala[-i + 12] != 0:
                 self.mancala[13] += 1 + self.mancala[-i + 12]
                 self.mancala[i] = 0
                 self.mancala[-i + 12] = 0
+                
             if i == 13:
                 repeat_turn = True
                 
@@ -188,14 +194,18 @@ class Mancala_Board:
                     continue
                 else:
                     self.mancala[i % 14] += 1
+                    
                 stones -= 1
             if i < 6 and self.mancala[i] == 1 and i != 6 and self.mancala[-i + 12] != 0:
                 self.mancala[6] += 1 + self.mancala[-i + 12]
                 self.mancala[i] = 0
                 self.mancala[-i + 12] = 0
+                
             if i == 6:
                 repeat_turn = True
+                
         return repeat_turn
+
 
     def isEnd(self):
         if sum(self.mancala[0:6]) == 0:
@@ -265,6 +275,23 @@ def alphabeta(mancala, depth, alpha, beta, MinorMax):
             if alpha >= beta:
                 break
         return v, player_move
+    
+def game_over_popup(message):
+    
+    popup_width, popup_height = 420, 220
+    popup_x = (SCREEN_WIDTH - popup_width) // 2
+    popup_y = (SCREEN_HEIGHT - popup_height) // 2
+    
+    pygame.draw.rect(screen, RED, (popup_x, popup_y, popup_width, popup_height),)
+    
+    game_over_text = message_font.render("GAME OVER", True, WHITE)
+    screen.blit(game_over_text, (SCREEN_WIDTH // 2 - game_over_text.get_width() // 2, popup_y + 40))
+    
+    result_text = message_font.render(message, True, WHITE)
+    screen.blit(result_text, (SCREEN_WIDTH // 2 - result_text.get_width() // 2, popup_y + 100))
+    
+    pygame.display.flip()
+    time.sleep(5)
 
 def player_aibot():
     mancala_board = Mancala_Board(None)
@@ -297,13 +324,11 @@ def player_aibot():
             suggested_move = genetic_algorithm(mancala_board)
         
         if player_turn:
-            suggestion_font = pygame.font.SysFont('Arial', 28)  # Use Arial font for better clarity
+            suggestion_font = pygame.font.SysFont('Arial', 28)
             suggestion_text = suggestion_font.render(f"Suggested move: Pit {suggested_move + 1}", True, BLACK)
             
-            # Clear the area where the suggestion will be displayed
             pygame.draw.rect(screen, WHITE, (10, 50, 300, 40))
             
-            # Display the suggestion text
             screen.blit(suggestion_text, (10, 55))
             pygame.display.flip()
         
@@ -316,7 +341,7 @@ def player_aibot():
             
             player_turn = repeat_turn
             selected_pit = -1
-            suggested_move = None  # Reset suggested move for next turn
+            suggested_move = None 
         
         if not player_turn and not mancala_board.isEnd():
             _, ai_move = alphabeta(mancala_board, 5, -100000, 100000, True)
@@ -327,16 +352,16 @@ def player_aibot():
             time.sleep(0.5)
             
             player_turn = not repeat_turn
-            suggested_move = None  # Reset suggested move for next turn
+            suggested_move = None  
         
         if mancala_board.isEnd():
             if mancala_board.mancala[13] > mancala_board.mancala[6]:
-                winner_message = "AI-BOT WINS"
+                game_over_popup("AI-BOT WINS")
             elif mancala_board.mancala[13] < mancala_board.mancala[6]: 
-                winner_message = "YOU WIN" 
+                game_over_popup("YOU WIN")
             else: 
-                winner_message = "TIE"
-            draw_board(mancala_board.mancala, message=winner_message)
+                game_over_popup("TIE")
+
             pygame.display.flip()
             time.sleep(3)
             running = False
@@ -353,7 +378,7 @@ def fitness(individual, mancala_board):
     for move in individual:
         if board_copy.mancala[move] > 0:
             board_copy.player_move(move)
-            total_stones += board_copy.mancala[6]  # Player's mancala
+            total_stones += board_copy.mancala[6]  
     return total_stones
 
 def crossover(parent1, parent2):
@@ -368,7 +393,7 @@ def mutate(individual, mutation_rate):
     return individual
 
 def genetic_algorithm(mancala_board, population_size=50, generations=20, mutation_rate=0.1):
-    population = initialize_population(population_size, 3)  # Consider sequences of 3 moves
+    population = initialize_population(population_size, 3)  
     
     for _ in range(generations):
         population = sorted(population, key=lambda x: fitness(x, mancala_board), reverse=True)
@@ -383,17 +408,35 @@ def genetic_algorithm(mancala_board, population_size=50, generations=20, mutatio
         population = new_population
     
     best_sequence = max(population, key=lambda x: fitness(x, mancala_board))
-    return best_sequence[0]  # Return the first move of the best sequence
+    return best_sequence[0] 
         
+def blur_image(surface, passes=3, scale_factor=5):
+    
+    for _ in range(passes):
+    
+        width, height = surface.get_size()
+
+        small_surface = pygame.transform.smoothscale(surface, (width // scale_factor, height // scale_factor))
+        
+        surface = pygame.transform.smoothscale(small_surface, (width, height))
+    
+    return surface
+
 def splash_screen():
-    screen.fill(WHITE)
-    title_text = splash_font.render("MANCALA", True, BLACK)
+    
+    background_image = pygame.image.load("bgimg.jpeg")
+    background_image = pygame.transform.scale(background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    blurred_background = blur_image(background_image, passes=5, scale_factor=5)
+
+    screen.blit(blurred_background, (0, 0))
+
+    title_text = splash_font.render("MANCALA", True, splash_screen_font_color)
     screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, SCREEN_HEIGHT // 2 - 100))
-    prompt_text = message_font.render("Press any key to start", True, BLACK)
+    prompt_text = message_font.render("Press any key to start", True, splash_screen_font_color)
     screen.blit(prompt_text, (SCREEN_WIDTH // 2 - prompt_text.get_width() // 2, SCREEN_HEIGHT // 2 + 50))
     pygame.display.flip()
     
-    # Wait for a key press to start the game
     waiting = True
     while waiting:
         for event in pygame.event.get():
@@ -403,10 +446,6 @@ def splash_screen():
             elif event.type == pygame.KEYDOWN:
                 waiting = False
 
-print("\n:::: MANCALA BOARD GAME ::::")
-print("!!! Welcome to Mancala Gameplay !!!")
 while True:
-    print("\nPlay the game")
     splash_screen()
     player_aibot()
-    break
